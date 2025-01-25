@@ -3,7 +3,7 @@ from ImageTo2d import *
 import cv2
 
 if __name__ == '__main__':
-    birds_eye_image,corners = getOutlineAndTransform("/Users/olivermcdonald/CueTips/data/istockphoto-119803395-612x612.jpg", padding=40)
+    birds_eye_image,corners = getOutlineAndTransform("data/pool_table_overhead.png", padding=40)
     
     cartoon_img, pool_balls = cartoonify(corners,birds_eye_image)
 

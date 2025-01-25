@@ -62,7 +62,7 @@ def cartoonify(table_coordinates, img=cv2.imread('data/pool_table_overhead.png')
     '''
     
     blurred = preprocess(img)
-    circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, dp=1, minDist=1, param1=50, param2=30, minRadius=3, maxRadius=50)
+    circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, dp=1.5, minDist=30, param1=50, param2=25, minRadius=20, maxRadius=70)
 
     img, pool_balls, avg_radius = plotCircles(img, circles)
     
