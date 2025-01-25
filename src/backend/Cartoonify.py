@@ -28,7 +28,10 @@ def plotCircles(img, circles):
             # Draw the circle on the image
             cv2.circle(img, center=(x, y), radius=r, color=(0, 255, 0), thickness=4)  # Green circle
     
-
+        # cv2.imshow(img)
+        # cv2.waitKey(0)
+        print(img)
+        print(pool_balls)
         return img, pool_balls, avg_radius
 
 def displayBalls(pool_balls, table_coordinates, img_shape, radius):
@@ -59,13 +62,13 @@ def cartoonify(table_coordinates, img=cv2.imread('data/pool_table_overhead.png')
     '''
     
     blurred = preprocess(img)
-    circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, dp=1, minDist=20, param1=50, param2=30, minRadius=15, maxRadius=50)
+    circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, dp=1, minDist=1, param1=50, param2=30, minRadius=3, maxRadius=50)
 
     img, pool_balls, avg_radius = plotCircles(img, circles)
     
     cartoon_img = displayBalls(pool_balls, table_coordinates, img_shape=img.shape, radius=avg_radius)
     
-    showImgs() # Comment out
+    # showImgs() # Comment out
 
     return cartoon_img, pool_balls
     
