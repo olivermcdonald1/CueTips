@@ -10,8 +10,15 @@ export default {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+          dark: '#212227', // #212227
+          iris: '#5D3FD3', // #5D3FD3
+          poolGreen: '#0A6C03', // #0A6C03
+          lightGray: '#CFCFCF', // #CFCFCF
       },
-    },
+      fontFamily: {
+        cakra: ['Cakra-Normal']
+      },
+    }
   },
   plugins: [],
 };

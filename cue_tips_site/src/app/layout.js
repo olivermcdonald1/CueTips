@@ -22,7 +22,13 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <div className="min-h-screen bg-gradient-to-t from-[#212227] via-[#5D3FD3] to-[#212227] relative">
+          {children}
+          <div className="absolute inset-0 twinkling-stars"></div>
+          <div className="absolute inset-0 far-stars"></div>
+          <div className="absolute inset-0 close-stars"></div>
+          <div className="absolute inset-0 bg-glow"></div>
+        </div>
       </body>
     </html>
   );
