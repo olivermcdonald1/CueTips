@@ -45,9 +45,14 @@ def displayBalls(pool_balls, table_coordinates, img_shape, radius):
         cv2.putText(img, str(pool_ball.suit), (x - 5, y + 5), font, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
     
     return img
-        
 
-def cartoonify(table_coordinates, img=cv2.imread('/Users/jacobleader/Desktop/Code/CueTips/data/pool_table_overhead.png')):
+def showImgs(img, cartoon_img):
+    cv2.imshow("OG img", img)
+    cv2.imshow("cartoon", cartoon_img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+def cartoonify(table_coordinates, img=cv2.imread('data/pool_table_overhead.png')):
     '''
     input: numpy.ndarray
     output: numpy.ndarray, [PoolBalls]
@@ -60,13 +65,11 @@ def cartoonify(table_coordinates, img=cv2.imread('/Users/jacobleader/Desktop/Cod
     
     cartoon_img = displayBalls(pool_balls, table_coordinates, img_shape=img.shape, radius=avg_radius)
     
-    cv2.imshow("OG img", img)
-    cv2.imshow("cartoon", cartoon_img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    showImgs() # Comment out
 
-    return cartoon_img
+    return cartoon_img, pool_balls
     
+# Testing
 if __name__ == '__main__':
     table_coordinates = np.float32([[415, 239], [172, 1121],
                        [1575, 1158], [1380, 243]])
