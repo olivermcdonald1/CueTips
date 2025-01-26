@@ -1,114 +1,186 @@
-import pymunk
-import pygame
+import sys
 import math
 import random
+import pygame
+import pymunk
 
-space = pymunk.Space()  # Simulation space
-space.gravity = (0, 0)  # No gravity
+
+space = pymunk.Space()
+space.gravity = (0, 0)
+
+collisions = []
+last_positions = {}
+
+def on_collision_ball_ball(arbiter, space, data):
+ 
+    shape_a, shape_b = arbiter.shapes
+
+   
+    for shape in (shape_a, shape_b):
+       
+        if shape.collision_type == 1:
+            current_pos = shape.body.position
+           
+            start_pos = data["last_positions"][shape]
+            end_pos = (current_pos.x, current_pos.y)
+            
+            data["collisions"].append((start_pos, end_pos))
+        
+            data["last_positions"][shape] = end_pos
+
+    
+    return True
+
+def on_collision_ball_wall(arbiter, space, data):
+   
+    shape_a, shape_b = arbiter.shapes
+    if shape_a.collision_type == 1:
+        ball_shape = shape_a
+    else:
+        ball_shape = shape_b
+
+    current_pos = ball_shape.body.position
+    start_pos = data["last_positions"][ball_shape]
+    end_pos = (current_pos.x, current_pos.y)
 
 
+    data["collisions"].append((start_pos, end_pos))
+
+ 
+    data["last_positions"][ball_shape] = end_pos
+
+    return True
 
 class SimulatedBall:
-    def __init__(self, x, y, radius, color, velocity):
+    def __init__(self, x, y, radius, color, velocity=(0,0)):
+      
         self.radius = radius
         self.color = color
+
         self.body = pymunk.Body(mass=1, moment=pymunk.moment_for_circle(1, 0, radius))
         self.body.position = (x, y)
         self.body.velocity = velocity
 
         self.shape = pymunk.Circle(self.body, radius)
-        self.shape.friction = 0.06  # Pool balls have little friction, 0.03-0.08
-        self.shape.elasticity = 0.9  # very elastic
+        self.shape.friction = 0.06
+        self.shape.elasticity = 0.9
         
-        space.add(self.body, self.shape)
-        
-    def draw(self, screen):
-        pygame.draw.circle(screen, self.color, (int(self.body.position.x), int(self.body.position.y)), self.radius)
+        self.shape.collision_type = 1
 
-def createBorders(top_cords, bottom_cords, right_cords, left_cords):
+        space.add(self.body, self.shape)
+
+        last_positions[self.shape] = (x, y)
+
+    def draw(self, screen):
+        pos = self.body.position
+        pygame.draw.circle(
+            screen,
+            self.color,
+            (int(pos.x), int(pos.y)),
+            self.radius
+        )
+
+def create_borders(top_cords, bottom_cords, right_cords, left_cords):
+    """
+    Each argument is ((x1,y1),(x2,y2)) for the table edge.
+    We'll give these walls collision_type=2 so we can track ball-wall collisions.
+    """
     walls = [
-        pymunk.Segment(space.static_body, top_cords[0], top_cords[1], 5),  # top
-        pymunk.Segment(space.static_body, bottom_cords[0], bottom_cords[1], 5),  # bottom
-        pymunk.Segment(space.static_body, right_cords[0], right_cords[1], 5),  # right
-        pymunk.Segment(space.static_body, left_cords[0], left_cords[1], 5),  # left
+        pymunk.Segment(space.static_body, top_cords[0], top_cords[1], 5),
+        pymunk.Segment(space.static_body, bottom_cords[0], bottom_cords[1], 5),
+        pymunk.Segment(space.static_body, right_cords[0], right_cords[1], 5),
+        pymunk.Segment(space.static_body, left_cords[0], left_cords[1], 5),
     ]
-    
     for wall in walls:
-        wall.friction = 0.14  # friction for walls, found online
+        wall.friction = 0.14
         wall.elasticity = 0.9
+        wall.collision_type = 2
         space.add(wall)
-        
-def run_game(balls, ball_radius, cue_ball, screen, clock):
+
+
+def run_game(balls, screen, clock):
     running = True
     while running:
-        # Handle events (like closing the window)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+        
+        space.step(1/50.0)
 
-        space.step(1/50.0)  # 1/50th of a second step
+      
+        screen.fill((0,0,0))
 
-        # Clear screen
-        screen.fill((0, 0, 0))
+      
+        for b in balls:
+            b.draw(screen)
 
-        # Draw the cue ball
-        cue_ball.draw(screen)
+        for line_seg in collisions:
+            start, end = line_seg
+            pygame.draw.line(
+                screen, (255, 0, 0),
+                (int(start[0]), int(start[1])),
+                (int(end[0]), int(end[1])),
+                2
+            )
 
-        # Draw the other balls
-        for ball in balls:
-            ball.draw(screen)
+        pygame.display.flip()
+        clock.tick(50)
 
-        pygame.display.flip()  # Update display
-        clock.tick(50)  # Cap the frame rate
+    pygame.quit()
+    sys.exit()
 
 
-def createBalls(pool_balls, ball_radius):
-    simulated_balls = []
-    for pool_ball in pool_balls:
-        simulated_ball = SimulatedBall(
-            x=pool_ball.x_cord,
-            y=pool_ball.y_cord,
-            color=pool_ball.color,
-            radius=ball_radius,
-            velocity=(0, 0)  # No velocity for the other balls initially
-        ) 
-        simulated_balls.append(simulated_ball)
+def main():
+    pygame.init()
     
-    return simulated_balls
-    
-def simulatePaths(pool_balls, cue_ball, wall_cords, ball_radius):
-    # Define borders
-    top_cords = [(0, 0), (700, 0)] # Top wall (x1, y1) to (x2, y2)
-    bottom_cords = [(0, 1000), (700, 5000)] # Bottom wall (x1, y1) to (x2, y2)
-    left_cords = [(0, 0), (0, 1000)] # Left wall (x1, y1) to (x2, y2)
-    right_cords = [(700, 0), (700, 5000)] # Right wall (x1, y1) to (x2, y2)
-
-    table_height = bottom_cords[0][1] - top_cords[0][1]
-    table_width = right_cords[0][0] - left_cords[0][0]
-    print(table_height, table_width)
-    screen = pygame.display.set_mode((table_height, table_width)) 
+    # Table is 400 wide, 800 tall
+    WIDTH, HEIGHT = 400, 800
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
     clock = pygame.time.Clock()
-    
-    createBorders(top_cords, bottom_cords, right_cords, left_cords)
 
-    # Create balls
-    simulated_balls = createBalls(pool_balls, ball_radius)
+    # Create borders (top, bottom, left, right)
+    top_cords    = ((0, 0), (WIDTH, 0))
+    bottom_cords = ((0, HEIGHT), (WIDTH, HEIGHT))
+    left_cords   = ((0, 0), (0, HEIGHT))
+    right_cords  = ((WIDTH, 0), (WIDTH, HEIGHT))
+    create_borders(top_cords, bottom_cords, right_cords, left_cords)
 
-    # Cue ball with random angle and speed
-    angle = random.uniform(0, 2 * math.pi)
-    speed = random.uniform(50, 150)
-    velocity_vec = pymunk.Vec2d(speed, 0).rotated(angle)
-    cue_ball = SimulatedBall(200, 200, ball_radius, (255, 255, 255), velocity_vec)
 
-    # Start game simulation
-    run_game(simulated_balls, ball_radius, cue_ball, screen, clock)
+    handler_ball_ball = space.add_collision_handler(1, 1)
+    handler_ball_ball.begin = on_collision_ball_ball
+    handler_ball_ball.data["collisions"] = collisions
+    handler_ball_ball.data["last_positions"] = last_positions
+
+    handler_ball_wall = space.add_collision_handler(1, 2)
+    handler_ball_wall.begin = on_collision_ball_wall
+    handler_ball_wall.data["collisions"] = collisions
+    handler_ball_wall.data["last_positions"] = last_positions
+
+ 
+    balls = []
+
    
-    paths = []  # Store paths of the balls for analysis (optional)
-    
-    return paths
+    angle = random.uniform(0, 2*math.pi)
+    speed = random.uniform(200, 250)
+    vx, vy = pymunk.Vec2d(speed, 0).rotated(angle)
+    cue_ball = SimulatedBall(
+        x=WIDTH/2, 
+        y=HEIGHT/2,
+        radius=15,
+        color=(255, 255, 255),
+        velocity=(vx, vy)
+    )
+    balls.append(cue_ball)
 
-class CueBall:
-    def __init__(self, x_cord, y_cord, initial_speed_vector):
-        self.x_cord = x_cord
-        self.y_cord = y_cord
-        self.initial_speed_vector = initial_speed_vector
+    for _ in range(4):
+        x = random.randint(50, WIDTH-50)
+        y = random.randint(50, HEIGHT-50)
+        color = (random.randint(100,255), random.randint(100,255), random.randint(100,255))
+        ball = SimulatedBall(x, y, 15, color)
+        balls.append(ball)
+
+    run_game(balls, screen, clock)
+
+
+if __name__ == "__main__":
+    main()
