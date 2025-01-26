@@ -3,6 +3,7 @@ import math
 import random
 import pygame
 import pymunk
+import svgwrite
 
 space = pymunk.Space()
 space.gravity = (0, 0)
@@ -119,6 +120,27 @@ class SimulatedBall:
         pos = self.body.position
         pygame.draw.circle(screen, self.color, (int(pos.x), int(pos.y)), self.radius)
 
+
+def save_paths_as_svg(collisions, filename="ball_paths.svg"):
+   
+
+    
+    dwg = svgwrite.Drawing(filename, profile='tiny', size=(400, 800))
+
+    dwg.add(dwg.rect(insert=(0, 0), size=('100%', '100%'), fill='rgb(38, 141, 44)'))
+
+    for start, end, color in collisions:
+        svg_color = f'rgb({color[0]},{color[1]},{color[2]})'
+        dwg.add(dwg.line(
+            start=(start[0], start[1]),
+            end=(end[0], end[1]),
+            stroke=svg_color,
+            stroke_width=2
+        ))
+
+    dwg.save()
+
+    
 def create_borders():
     WIDTH, HEIGHT = 400, 800
     walls = [
@@ -158,21 +180,31 @@ def create_pockets():
     return pockets
 
 def draw_pockets(screen, pockets):
-    """Draw the visual outlines of pockets on the screen."""
+    
     for pos, radius in pockets:
         pygame.draw.circle(screen, (255, 255, 255), (int(pos[0]), int(pos[1])), radius, 2)  # White outline
 
-def run_game(balls, screen, clock):
+def run_game(balls, screen, clock, cue_angle=90):
     running = True
-    friction_coefficient = 0.7  # Adjust for realistic slowing
+    friction_coefficient = 0.7  #
 
     pockets = create_pockets()
+    cue_ball = next((b for b in balls if b.color == (255, 255, 255)), None)
+    if not cue_ball:
+        raise ValueError("Cue ball is required for the simulation")
 
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
 
+        # Apply velocity to the cue ball in the direction of the provided angle when stationary
+        if cue_ball.body.velocity.length == 0 and cue_angle is not None:
+            speed = 200  # Set the desired speed of the cue ball
+            cue_ball.body.velocity = (
+                speed * math.cos(cue_angle),
+                speed * math.sin(cue_angle)
+            )
 
         for ball in balls:
             velocity = ball.body.velocity
@@ -180,9 +212,9 @@ def run_game(balls, screen, clock):
 
         space.step(1/50.0)
 
-        screen.fill((0, 0, 0))
+        screen.fill((38, 141, 44))
 
-        draw_pockets(screen, pockets)  # Draw pocket outlines
+        draw_pockets(screen, pockets)  #
 
         for b in balls:
             if b.body in space.bodies:
@@ -198,8 +230,17 @@ def run_game(balls, screen, clock):
         pygame.display.flip()
         clock.tick(50)
 
+    # Save the collisions as an SVG when the simulation ends
+    save_paths_as_svg(collisions)
+
     pygame.quit()
     sys.exit()
+
+
+# Add this modification to save the paths to an SVG file whenever the simulation ends.
+# The saved SVG can then be embedded into a website using standard HTML <img> tags or <object> tags.
+
+
 
 def main(pool_balls, cue_ball=None, wall_cords=None, ball_radius=15):
     global collisions, last_positions
@@ -223,7 +264,7 @@ def main(pool_balls, cue_ball=None, wall_cords=None, ball_radius=15):
     handler_bw.data["collisions"] = collisions
     handler_bw.data["last_positions"] = last_positions
 
-    handler_bp = space.add_collision_handler(1, 3)  # Ball-pocket collision handler
+    handler_bp = space.add_collision_handler(1, 3)  
     handler_bp.begin = on_collision_ball_pocket
 
     balls = []

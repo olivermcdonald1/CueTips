@@ -32,7 +32,7 @@ if __name__ == '__main__':
         pool_ball.y_cord = int(pool_ball.y_cord * scale_y)
 
 
-    main(pool_balls, cue_ball=None, wall_cords=None, ball_radius=avg_radius)
+    main(pool_balls, cue_ball=None, wall_cords=None, ball_radius=avg_radius/2)
 
 
     cv2.imshow("birds eye", birds_eye_image)
