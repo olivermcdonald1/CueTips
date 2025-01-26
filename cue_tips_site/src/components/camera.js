@@ -13,7 +13,11 @@ const Camera = () => {
 
   const startCamera = async () => {
     try {
-      mediaStream.current = await navigator.mediaDevices.getUserMedia({ video: true });
+      mediaStream.current = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment'
+        }
+      });
       videoRef.current.srcObject = mediaStream.current;
       setIsStreaming(true);
     } catch (err) {
@@ -73,21 +77,35 @@ const Camera = () => {
   };
 
   return (
-    <div className="relative w-full h-screen flex flex-col items-center justify-center">
-      <div className="relative w-full max-w-3xl h-[60vh]"> {/* Limit the camera's height */}
+    <div className="relative min-h-screen flex flex-col items-center justify-between px-4">
+      {/* Video Section */}
+      <div className="absolute top-[42%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[80%] sm:w-[60%]">
         <video
           ref={videoRef}
-          autoPlay
-          className="w-full h-full object-cover absolute top-0 left-0 rounded-lg shadow-lg" // Tailwind styling for video
+          autoPlay loop muted controls playsInline
+          className="mx-auto mt-4 w-full rounded-lg"
         />
       </div>
+  
+      {/* Processed Image Section */}
+      {uploadedImage && (
+        <div className="absolute top-[42%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[80%] sm:w-[60%]">        
+          <img
+            src={`data:image/png;base64,${uploadedImage}`}
+            alt="Processed"
+            className="mx-auto rounded-lg"
+          />
+        </div>
+      )}
+  
+      {/* Control Buttons */}
       <div className="absolute bottom-10 w-full text-center">
         {!isStreaming ? (
           <button
             onClick={startCamera}
             className="px-6 py-3 text-lg bg-blue-600 text-white rounded-md cursor-pointer m-2 w-3/4 sm:w-1/2"
           >
-            Start Camera
+            Open Camera
           </button>
         ) : (
           <button
@@ -97,45 +115,24 @@ const Camera = () => {
             Stop Camera
           </button>
         )}
+  
         {isUploading && (
           <div className="text-white text-xl">Uploading...</div>
         )}
-        {uploadedImage && (
-          <div className="mt-4">
-            <h2 className="text-2xl font-semibold">Processed Image</h2>
-            <img
-              src={`data:image/png;base64,${uploadedImage}`}
-              alt="Processed"
-              className="mx-auto mt-4 max-w-full rounded-lg"
-            />
-          </div>
-        )}
+  
         <button
           onClick={capturePhoto}
           disabled={!isStreaming}
           className="px-6 py-3 text-lg bg-green-600 text-white rounded-md cursor-pointer m-2 w-3/4 sm:w-1/2"
         >
-          Capture Photo
+          Take Photo
         </button>
-  
-        
       </div>
   
+      {/* Hidden Canvas for image processing */}
       <canvas ref={canvasRef} className="hidden" />
     </div>
   );
-};
-
-const buttonStyle = {
-  padding: '10px 20px',
-  fontSize: '18px',
-  backgroundColor: '#007bff',
-  color: 'white',
-  border: 'none',
-  borderRadius: '5px',
-  cursor: 'pointer',
-  margin: '10px',
-  width: '80%',
-};
+}
 
 export default Camera;
