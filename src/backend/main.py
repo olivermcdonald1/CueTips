@@ -18,7 +18,7 @@ def getCueTips(img, run_sim):
         
     print("Stilll standing!!")
     
-    return cartoon_img, tempfile_svg_name 
+    return cartoon_img, tempfile_svg_name, (pool_balls, pockets, edges, avg_radius)
 
 
 if __name__ == '__main__':
