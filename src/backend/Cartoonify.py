@@ -23,7 +23,7 @@ def plotCircles(img, circles):
           
             
             
-            pool_ball = PoolBall(x, y, color=(0, 255, 0), suit="solid",radius=5)
+            pool_ball = PoolBall(x, y, color=(0, 255, 0), suit="solid")
             pool_balls.append(pool_ball)
             
             print(f"Circle: x-cord: {x}, y-cord: {y}, radius: {r}")
