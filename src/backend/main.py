@@ -4,6 +4,16 @@ from Border import *
 from physics.simulatePaths import main  # We'll update simulatePaths soon
 import cv2
 
+def getCueTips(img):
+    birds_eye_image, corners = getOutlineAndTransform("data/pool_table_overhead.png", padding=40)
+    cropped_img, edges = getBorder(birds_eye_image)
+    cartoon_img, pool_balls, avg_radius = cartoonify(corners, cropped_img)
+
+    paths = main(pool_balls, cue_ball=None, wall_cords=edges, ball_radius=avg_radius)
+    
+    return cartoon_img, paths
+    
+    
 if __name__ == '__main__':
     
     birds_eye_image, corners = getOutlineAndTransform("data/pool_table_overhead.png", padding=40)
