@@ -101,6 +101,7 @@ def draw_inside_border(image, edges):
 def perfect_edges(top_edge, bottom_edge, left_edge, right_edge):
    # x1, y1, x2, y2 
     # Unpack initial coordinates
+    print(top_edge)
     top_left_x1, top_left_y1, top_right_x1, top_right_y1 = top_edge
     bottom_left_x1, bottom_left_y1, bottom_right_x1, bottom_right_y1 = bottom_edge
     top_left_x2, top_left_y2, bottom_left_x2, bottom_left_y2 = left_edge
@@ -141,32 +142,41 @@ def format_coordinates(input_coords):
     
     return top_cords, bottom_cords, left_cords, right_cords
 
-def main(image_path):
+def crop_image(image, top_cords, bottom_cords, left_cords, right_cords):
+    top_y = min(top_cords[1], top_cords[3])
+    bottom_y = max(bottom_cords[1], bottom_cords[3])
+    left_x = min(left_cords[0], left_cords[2])
+    right_x = max(right_cords[0], right_cords[2])
+
+    cropped_image = image[top_y:bottom_y, left_x:right_x]
+    return cropped_image
+
+def getBorder(image):
     """
     Main function to process the image and draw the pool table's inside border.
     
     Args:
         image_path (str): Path to the input image.
     """
-    # Load the image
-    image = cv2.imread(image_path)
+ 
     
     # Detect inside rail edges
     rail_lines = enhanced_rail_detection(image)
 
     # Get the main inside table edges
     edges = get_inside_table_edges(rail_lines)
+    draw_inside_border(image, edges)
+    
+    cv2.imshow('Inside Rail Edges', image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
     edges = perfect_edges(top_edge=edges[0], bottom_edge=edges[1], left_edge=edges[2], right_edge=edges[3])
     top_cords, bottom_cords, left_cords, right_cords = format_coordinates(edges)
     
-    return top_cords, bottom_cords, left_cords, right_cords  
+    image = crop_image(image, top_cords, bottom_cords, left_cords, right_cords)
+    return image, (top_cords, bottom_cords, left_cords, right_cords)
 
-    # Draw the border around the inside edges
-    # draw_inside_border(image, edges)
-    
-    # cv2.imshow('Inside Rail Edges', image)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+
     
 
 # main("/Users/jacobleader/Desktop/Code/CueTips/data/pool_table_overhead.png")

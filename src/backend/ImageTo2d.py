@@ -38,7 +38,7 @@ def get_prominent_color(image):
     
     return avg_hsv
 
-def getOutlineAndTransform(image_path, padding=10):
+def getOutlineAndTransform(image_path, padding=50):
     image = cv2.imread(image_path)
     if image is None:
         print("Error: Could not load image. Check the file path.")
