@@ -84,9 +84,9 @@ def cartoonify(table_coordinates, img=cv2.imread('data/pool_table_overhead.png')
     
     # showImgs() # Comment out
     
-    return cartoon_img, pool_balls
+    return cartoon_img, pool_balls, avg_radius
     
-# Testing
+# Testingi
 if __name__ == '__main__':
     table_coordinates = np.float32([[415, 239], [172, 1121],
                        [1575, 1158], [1380, 243]])
