@@ -13,17 +13,18 @@ def getCueTips(img, run_sim):
     cartoon_img, pool_balls, avg_radius, pockets = cartoonify(birds_eye_image, edges)
 
     tempfile_svg_name = ''
+    
     if run_sim:
-        tempfile_svg_name = main(pool_balls, pockets, cue_ball=None, wall_cords=edges, ball_radius=avg_radius, cue_angle=280, show_simulation=False)
+        tempfile_svg_name, cue_ball_coords = main(pool_balls, wall_cords=edges, ball_radius=avg_radius, cue_angle=0, show_simulation=False)
         
     print("Stilll standing!!")
     
-    return cartoon_img, tempfile_svg_name, (pool_balls, pockets, edges, avg_radius)
+    return cartoon_img, tempfile_svg_name, cue_ball_coords, (pool_balls, pockets, edges, avg_radius)
 
 
 if __name__ == '__main__':
     img = cv2.imread("data/pool_table_overhead.png")
-    getCueTips(img, run_sim=False)
+    getCueTips(img, run_sim=True)
     
     
     # birds_eye_image, corners = getOutlineAndTransform(img, padding=40)

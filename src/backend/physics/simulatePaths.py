@@ -137,8 +137,8 @@ def save_paths_as_svg(collisions, WIDTH, HEIGHT):
     for start, end, color in collisions:
         svg_color = f'rgb({color[0]},{color[1]},{color[2]})'
         dwg.add(dwg.line(
-            start=(start[0], start[1]),
-            end=(end[0], end[1]),
+            start=(str(start[0]), str(start[1])),
+            end=(str(end[0]), str(end[1])),
             stroke=svg_color,
             stroke_width=2
         ))
