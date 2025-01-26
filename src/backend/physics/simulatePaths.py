@@ -308,8 +308,6 @@ def main(pool_balls, wall_cords=None, ball_radius=15, cue_angle=0, show_simulati
     space = pymunk.Space()
     space.gravity = (0, 0)
 
-    tracemalloc.start()
-
     collisions = []
     last_positions = {}
 
@@ -376,18 +374,12 @@ def main(pool_balls, wall_cords=None, ball_radius=15, cue_angle=0, show_simulati
     gc.collect()
     pygame.display.quit()
     pygame.quit()
-    # space.remove_collision_handler(1, 1)
-    # space.remove_collision_handler(1, 2)
-    # space.remove_collision_handler(1, 3)
     del space
     
+    # snapshot = tracemalloc.take_snapshot()
+    # top_stats = snapshot.statistics('lineno')
+    # print("[Top 10 memory-consuming lines]")
+    # for index, stat in enumerate(top_stats[:10], 1):
+    #     print(f"#{index}: {stat}")  # Get memory stats before and after cleanup
 
-        
-    snapshot = tracemalloc.take_snapshot()
-    top_stats = snapshot.statistics('lineno')
-
-    print("[Top 10 memory-consuming lines]")
-    for index, stat in enumerate(top_stats[:10], 1):
-        print(f"#{index}: {stat}")  # Get memory stats before and after cleanup
-    tracemalloc.stop()
     return tempfile_svg_name, cue_ball_pos_start
