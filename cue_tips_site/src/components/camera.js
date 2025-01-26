@@ -73,40 +73,55 @@ const Camera = () => {
   };
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100vh' }}>
-      <h1>Camera</h1>
-      <video
-        ref={videoRef}
-        autoPlay
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-        }}
-      />
-      <div style={{ position: 'absolute', bottom: '10%', width: '100%', textAlign: 'center' }}>
+    <div className="relative w-full h-screen flex flex-col items-center justify-center">
+      <div className="relative w-full max-w-3xl h-[60vh]"> {/* Limit the camera's height */}
+        <video
+          ref={videoRef}
+          autoPlay
+          className="w-full h-full object-cover absolute top-0 left-0 rounded-lg shadow-lg" // Tailwind styling for video
+        />
+      </div>
+      <div className="absolute bottom-10 w-full text-center">
         {!isStreaming ? (
-          <button onClick={startCamera} style={buttonStyle}>Start Camera</button>
+          <button
+            onClick={startCamera}
+            className="px-6 py-3 text-lg bg-blue-600 text-white rounded-md cursor-pointer m-2 w-3/4 sm:w-1/2"
+          >
+            Start Camera
+          </button>
         ) : (
-          <button onClick={stopCamera} style={buttonStyle}>Stop Camera</button>
+          <button
+            onClick={stopCamera}
+            className="px-6 py-3 text-lg bg-red-600 text-white rounded-md cursor-pointer m-2 w-3/4 sm:w-1/2"
+          >
+            Stop Camera
+          </button>
         )}
-        <button onClick={capturePhoto} disabled={!isStreaming} style={buttonStyle}>Capture Photo</button>
-
         {isUploading && (
-          <div style={{ color: 'white', fontSize: '24px' }}>Uploading...</div>
+          <div className="text-white text-xl">Uploading...</div>
         )}
         {uploadedImage && (
-          <div>
-            <h2>Processed Image</h2>
-            <img src={`data:image/png;base64,${uploadedImage}`} alt="Processed" />
+          <div className="mt-4">
+            <h2 className="text-2xl font-semibold">Processed Image</h2>
+            <img
+              src={`data:image/png;base64,${uploadedImage}`}
+              alt="Processed"
+              className="mx-auto mt-4 max-w-full rounded-lg"
+            />
           </div>
         )}
+        <button
+          onClick={capturePhoto}
+          disabled={!isStreaming}
+          className="px-6 py-3 text-lg bg-green-600 text-white rounded-md cursor-pointer m-2 w-3/4 sm:w-1/2"
+        >
+          Capture Photo
+        </button>
+  
+        
       </div>
-
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
+  
+      <canvas ref={canvasRef} className="hidden" />
     </div>
   );
 };

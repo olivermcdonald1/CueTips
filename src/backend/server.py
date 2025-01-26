@@ -7,6 +7,7 @@ from PIL import Image
 from flask_cors import CORS  # Add this import
 import numpy as np
 import cv2
+from main import getCueTips
 
 app = Flask(__name__)
 
@@ -21,7 +22,6 @@ if not os.path.exists(UPLOAD_FOLDER):
 def upload_image():
     try:
         file = request.files['file']
-        
         # If no file is selected
         if file.filename == '':
             return jsonify({"message": "No selected file"}), 400
@@ -29,10 +29,21 @@ def upload_image():
         # Open the image file
         img = Image.open(file.stream)
         np_img = np.array(img)
+
+        # test img 
+        print("HERE")
+        img = cv2.imread("/Users/jacobleader/Desktop/Code/CueTips/data/pool_table_overhead.png")
+        table_graphic = getCueTips(img) 
+        print("MADE")
         
+        img_rgb = cv2.cvtColor(table_graphic, cv2.COLOR_BGR2RGB)
+
+        pil_img = Image.fromarray(img_rgb)
+        # Save the image into a BytesIO object
         buffered = BytesIO()
-        img.save(buffered, format="PNG")
-        print("HERREEEEE")
+        pil_img.save(buffered, format="PNG")
+        buffered.seek(0)
+
         
         # Encode image to base64
         img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')

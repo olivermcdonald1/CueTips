@@ -162,7 +162,7 @@ def getBorder(image):
     
     # Detect inside rail edges
     rail_lines = enhanced_rail_detection(image)
-
+    print("HERE")
     # Get the main inside table edges
     edges = get_inside_table_edges(rail_lines)
     draw_inside_border(image, edges)

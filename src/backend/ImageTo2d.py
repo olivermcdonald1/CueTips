@@ -30,7 +30,6 @@ def get_prominent_color(image):
     """
     height, width = image.shape[:2]
     center_region = image[height // 3 : 2 * height // 3, width // 3 : 2 * width // 3]
-    
 
     avg_bgr = np.mean(center_region, axis=(0, 1))
     
@@ -38,8 +37,7 @@ def get_prominent_color(image):
     
     return avg_hsv
 
-def getOutlineAndTransform(image_path, padding=50):
-    image = cv2.imread(image_path)
+def getOutlineAndTransform(image, padding=50):    
     if image is None:
         print("Error: Could not load image. Check the file path.")
         return None, None
