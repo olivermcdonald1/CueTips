@@ -88,7 +88,7 @@ const Camera = () => {
       </div>
   
       {/* Processed Image Section */}
-      {uploadedImage && (
+      {uploadedImage && !isStreaming && (
         <div className="absolute top-[42%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[80%] sm:w-[60%]">        
           <img
             src={`data:image/png;base64,${uploadedImage}`}
