@@ -10,28 +10,32 @@ def preprocess(img):
 
 def plotCircles(img, circles):
     pool_balls = []
-    
+ 
     if circles is not None:
         circles = np.round(circles[0, :]).astype("int")  # Round and convert to integer
         radius_list = [circle[2] for circle in circles]
         min_radius = min(radius_list)
         avg_radius = int(sum(radius_list)/len(radius_list))
         for (x, y, r) in circles:
-            if r > min_radius * 1.3: # Pockets
+            if r > min_radius * 2: 
+        
                 continue
+          
             
-            pool_ball = PoolBall(x, y, color=(0, 255, 0), suit="solid")
+            
+            pool_ball = PoolBall(x, y, color=(0, 255, 0), suit="solid",radius=5)
             pool_balls.append(pool_ball)
             
             print(f"Circle: x-cord: {x}, y-cord: {y}, radius: {r}")
             
             # Draw the circle on the image
             cv2.circle(img, center=(x, y), radius=r, color=(0, 255, 0), thickness=4)  # Green circle
-    
+
         # cv2.imshow(img)
         # cv2.waitKey(0)
         print(img)
         print(pool_balls)
+        buildBorder(circles,min_radius)
         return img, pool_balls, avg_radius
 
 def displayBalls(pool_balls, table_coordinates, img_shape, radius):
@@ -55,6 +59,16 @@ def showImgs(img, cartoon_img):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
+def buildBorder(circles,min_radius):
+    pockets = []
+    for (x, y, r) in circles:
+            if r > 61: 
+                pocket = PoolBall(x,y,color=(0,0,0),suit="none",radius = r)
+                pockets.append(pocket)
+    for pocket in pockets:
+        print(pocket)
+            
+
 def cartoonify(table_coordinates, img=cv2.imread('data/pool_table_overhead.png')):
     '''
     input: numpy.ndarray
@@ -62,19 +76,21 @@ def cartoonify(table_coordinates, img=cv2.imread('data/pool_table_overhead.png')
     '''
     
     blurred = preprocess(img)
-    circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, dp=1.5, minDist=30, param1=50, param2=25, minRadius=20, maxRadius=70)
+    circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, dp=1, minDist=60, param1=50, param2=25, minRadius=20, maxRadius=30)
 
     img, pool_balls, avg_radius = plotCircles(img, circles)
     
     cartoon_img = displayBalls(pool_balls, table_coordinates, img_shape=img.shape, radius=avg_radius)
     
     # showImgs() # Comment out
-
+    
     return cartoon_img, pool_balls
     
 # Testing
 if __name__ == '__main__':
     table_coordinates = np.float32([[415, 239], [172, 1121],
                        [1575, 1158], [1380, 243]])
+    
     cartoonify(table_coordinates)
+  
     
