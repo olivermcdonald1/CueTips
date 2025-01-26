@@ -6,12 +6,15 @@ import pymunk
 import svgwrite
 import io
 import tempfile
+import tracemalloc
 
-space = pymunk.Space()
-space.gravity = (0, 0)
+
+
 
 collisions = []
 last_positions = {}
+import gc
+
 
 def calculate_deceleration(velocity, friction_coefficient, delta_time):
     """
@@ -100,7 +103,7 @@ def on_collision_ball_pocket(arbiter, space, data):
     return False  # End collision processing
 
 class SimulatedBall:
-    def __init__(self, x, y, radius, color, velocity=(0, 0)):
+    def __init__(self, x, y, radius, color, space, velocity=(0, 0)):
         self.radius = radius
         self.color = color
 
@@ -131,7 +134,7 @@ def save_paths_as_svg(collisions, WIDTH, HEIGHT):
     dwg = svgwrite.Drawing(temp_file.name, profile='tiny', size=(str(WIDTH), str(HEIGHT)))
     
     # Add the background rectangle (pool table green)
-    dwg.add(dwg.rect(insert=(0, 0), size=(str(WIDTH), str(HEIGHT)), fill='rgb(38, 141, 44)'))
+    # dwg.add(dwg.rect(insert=(0, 0), size=(str(WIDTH), str(HEIGHT)), fill='rgb(38, 141, 44)'))
     
     # Add the collision lines
     for start, end, color in collisions:
@@ -150,7 +153,7 @@ def save_paths_as_svg(collisions, WIDTH, HEIGHT):
     return temp_file.name
 
     
-def create_borders(edges):
+def create_borders(edges, space):
     top, bottom, left, right = edges
     walls = [
         pymunk.Segment(space.static_body, (top[0][0], top[0][1]), (top[1][0], top[1][1]), 5),
@@ -164,7 +167,7 @@ def create_borders(edges):
         wall.collision_type = 2
         space.add(wall)
 
-def create_pockets(WIDTH, HEIGHT):
+def create_pockets(WIDTH, HEIGHT, space):
     """Create 6 pockets for the pool table with visual outlines."""
     pocket_radius = 20
     pocket_positions = [
@@ -215,7 +218,7 @@ def get_cue_ball(pool_balls, max_color_diff=100):
 
     return closest_ball, remaining_balls
 
-def run_game(balls, screen, clock, pockets, show_simulation, WIDTH, HEIGHT):
+def run_game(balls, screen, clock, pockets, show_simulation, WIDTH, HEIGHT, space):
     running = True
     friction_coefficient = 0.7  #
 
@@ -246,26 +249,26 @@ def run_game(balls, screen, clock, pockets, show_simulation, WIDTH, HEIGHT):
         else:
             space.step(1/50.0)
 
-        screen.fill((38, 141, 44))
+        # screen.fill((38, 141, 44))
 
-        draw_pockets(screen, pockets)  #
+        # draw_pockets(screen, pockets)  #
 
-        for b in balls:
-            if b.body in space.bodies:
-                b.draw(screen)
+        # for b in balls:
+        #     if b.body in space.bodies:
+        #         b.draw(screen)
 
         for line_seg in collisions:
             start, end, color = line_seg
-            pygame.draw.line(screen, color,
-                             (int(start[0]), int(start[1])),
-                             (int(end[0]), int(end[1])),
-                             2)
+            # pygame.draw.line(screen, color,
+            #                  (int(start[0]), int(start[1])),
+            #                  (int(end[0]), int(end[1])),
+            #                  2)
 
-        pygame.display.flip()
-        if show_simulation:
-            clock.tick(50)
-        else:
-           clock.tick(100_000) 
+        # pygame.display.flip()
+        # if show_simulation:
+        #     clock.tick(50)
+        # else:
+        #    clock.tick(100_000) 
 
     # Save the collisions as an SVG when the simulation ends
     tempfile_svg_name = save_paths_as_svg(collisions, WIDTH, HEIGHT)
@@ -280,23 +283,47 @@ def run_game(balls, screen, clock, pockets, show_simulation, WIDTH, HEIGHT):
 # The saved SVG can then be embedded into a website using standard HTML <img> tags or <object> tags.
 
 
+def cleanup_space(space, balls):
+    for ball in balls:
+        if ball.body in space.bodies:
+            print(f"Removing ball: {ball.shape}")
+            space.remove(ball.body, ball.shape)
+
+    print("Clearing collisions and handlers")
+    collisions.clear()
+    last_positions.clear()
+
+    # # Remove collision handlers
+    # space.remove_collision_handler(1, 1)
+    # space.remove_collision_handler(1, 2)
+    # space.remove_collision_handler(1, 3)
+
+    print("Remaining bodies:", len(space.bodies))
+    print("Remaining shapes:", len(space.shapes))
+
 
 def main(pool_balls, wall_cords=None, ball_radius=15, cue_angle=0, show_simulation=True):
     global collisions, last_positions
+    
+    space = pymunk.Space()
+    space.gravity = (0, 0)
+
+    tracemalloc.start()
+
     collisions = []
     last_positions = {}
 
-    pygame.init()
+    # pygame.init()
     
     top_edge = wall_cords[0]
     left_edge = wall_cords[2]
     WIDTH = top_edge[1][0] - top_edge[0][0]
     HEIGHT = left_edge[1][1] - left_edge[0][1]
     
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    clock = pygame.time.Clock()
+    # screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    # clock = pygame.time.Clock()
 
-    create_borders(wall_cords)
+    create_borders(wall_cords, space)
 
     handler_bb = space.add_collision_handler(1, 1)
     handler_bb.begin = on_collision_ball_ball
@@ -321,7 +348,7 @@ def main(pool_balls, wall_cords=None, ball_radius=15, cue_angle=0, show_simulati
         y = pb.y_cord
         color = pb.color
 
-        ball = SimulatedBall(x, y, int(ball_radius), color, velocity=(0,0))
+        ball = SimulatedBall(x, y, int(ball_radius), color, space, velocity=(0,0))
         balls.append(ball)
 
     # Random cue ball velocity if not specified
@@ -333,11 +360,34 @@ def main(pool_balls, wall_cords=None, ball_radius=15, cue_angle=0, show_simulati
         cue_ball.y_cord, 
         int(ball_radius), 
         (255, 255, 255), 
+        space,
         pymunk.Vec2d(vx, vy)
     )
     balls.append(cue)
 
-    pockets = create_pockets(WIDTH, HEIGHT)
+    pockets = create_pockets(WIDTH, HEIGHT, space)
 
-    tempfile_svg_name = run_game(balls, screen, clock, pockets, show_simulation, WIDTH, HEIGHT)
+    screen = None
+    clock = None
+    tempfile_svg_name = run_game(balls, screen, clock, pockets, show_simulation, WIDTH, HEIGHT, space)
+    
+    # At the end of the game
+    cleanup_space(space, balls)
+    gc.collect()
+    pygame.display.quit()
+    pygame.quit()
+    # space.remove_collision_handler(1, 1)
+    # space.remove_collision_handler(1, 2)
+    # space.remove_collision_handler(1, 3)
+    del space
+    
+
+        
+    snapshot = tracemalloc.take_snapshot()
+    top_stats = snapshot.statistics('lineno')
+
+    print("[Top 10 memory-consuming lines]")
+    for index, stat in enumerate(top_stats[:10], 1):
+        print(f"#{index}: {stat}")  # Get memory stats before and after cleanup
+    tracemalloc.stop()
     return tempfile_svg_name, cue_ball_pos_start

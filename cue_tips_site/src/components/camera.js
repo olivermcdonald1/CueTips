@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
 
-const Camera = () => {
+const Camera = ({ svgContent }) => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -77,7 +77,7 @@ const Camera = () => {
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-between px-4">
+    <div className="relative min-h-screen flex flex-col items-center justify-between px-4 overflow-hidden">
       {/* Video Section */}
       <div className="absolute top-[42%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[80%] sm:w-[60%]">
         <video
@@ -96,6 +96,24 @@ const Camera = () => {
             className="mx-auto rounded-lg"
           />
         </div>
+      )}
+
+      {/* SVG Overlay on top of pool table */}
+      {svgContent && uploadedImage && !isStreaming && (
+        <div
+          className="absolute top-[25%] left-[10%] w-[80%] h-[80%] pointer-events-none"
+          style={{
+            position: 'absolute',
+            top: '24%',  // Adjust top position based on your pool table
+            left: '39%',  // Adjust left position based on your pool table
+            transform: 'translate(-50%, -50%) scale(0.2)',  // Scale the SVG as needed
+            pointerEvents: 'none',  // Ensure the SVG doesn't block interactions
+            backgroundColor: 'transparent',
+          }}
+          dangerouslySetInnerHTML={{
+            __html: svgContent
+          }}
+        />
       )}
   
       {/* Control Buttons */}
@@ -133,6 +151,6 @@ const Camera = () => {
       <canvas ref={canvasRef} className="hidden" />
     </div>
   );
-}
+};
 
 export default Camera;

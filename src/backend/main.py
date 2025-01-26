@@ -4,7 +4,9 @@ from Border import *
 from physics.simulatePaths import main  # We'll update simulatePaths soon
 import cv2
 
+
 def getCueTips(img, run_sim):
+
     birds_eye_image, corners = getOutlineAndTransform(img, padding=40)
     print("getting cue tips")
     cropped_img, edges = getBorder(birds_eye_image)
@@ -13,13 +15,14 @@ def getCueTips(img, run_sim):
     cartoon_img, pool_balls, avg_radius, pockets = cartoonify(birds_eye_image, edges)
 
     tempfile_svg_name = ''
-    
+    cue_ball_coords = (0,0) 
     if run_sim:
-        tempfile_svg_name, cue_ball_coords = main(pool_balls, wall_cords=edges, ball_radius=avg_radius, cue_angle=0, show_simulation=False)
+        tempfile_svg_name, cue_ball_coords = main(pool_balls, wall_cords=edges, ball_radius=avg_radius, cue_angle=45, show_simulation=True)
         
     print("Stilll standing!!")
     
-    return cartoon_img, tempfile_svg_name, cue_ball_coords, (pool_balls, pockets, edges, avg_radius)
+
+    return cartoon_img, tempfile_svg_name, cue_ball_coords, (pool_balls, edges, avg_radius)
 
 
 if __name__ == '__main__':

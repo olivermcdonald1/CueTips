@@ -98,6 +98,26 @@ def draw_inside_border(image, edges):
         cv2.line(image, bottom_right, bottom_left, (0, 255, 0), 2)  # Bottom edge
         cv2.line(image, bottom_left, top_left, (0, 255, 0), 2)  # Left edge
 
+        # Display coordinates at each corner
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.5
+        color = (255, 0, 0)  # Blue text
+        thickness = 1
+
+        cv2.putText(image, f"{top_left}", top_left, font, font_scale, color, thickness)
+        cv2.putText(image, f"{top_right}", top_right, font, font_scale, color, thickness)
+        cv2.putText(image, f"{bottom_left}", bottom_left, font, font_scale, color, thickness)
+        cv2.putText(image, f"{bottom_right}", bottom_right, font, font_scale, color, thickness)
+
+        edges_coordinates = [
+            [top_left, top_right],       # Top edge
+            [bottom_left, bottom_right], # Bottom edge
+            [top_left, bottom_left],     # Left edge
+            [top_right, bottom_right]    # Right edge
+        ]
+
+        return edges_coordinates
+
 def perfect_edges(top_edge, bottom_edge, left_edge, right_edge):
    # x1, y1, x2, y2 
     # Unpack initial coordinates
@@ -165,16 +185,17 @@ def getBorder(image):
     print("HERE")
     # Get the main inside table edges
     edges = get_inside_table_edges(rail_lines)
-    draw_inside_border(image, edges)
-    
-    cv2.imshow('Inside Rail Edges', image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-    edges = perfect_edges(top_edge=edges[0], bottom_edge=edges[1], left_edge=edges[2], right_edge=edges[3])
-    top_cords, bottom_cords, left_cords, right_cords = format_coordinates(edges)
-    
-    image = crop_image(image, top_cords, bottom_cords, left_cords, right_cords)
-    return image, (top_cords, bottom_cords, left_cords, right_cords)
+    edges_formated = draw_inside_border(image, edges)
+
+    # cv2.imshow('Inside Rail Edges', image)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+ 
+    # edges = perfect_edges(top_edge=edges[0], bottom_edge=edges[1], left_edge=edges[2], right_edge=edges[3])
+    # top_cords, bottom_cords, left_cords, right_cords = format_coordinates(edges)
+
+    # image = crop_image(image, top_cords, bottom_cords, left_cords, right_cords)
+    return image, edges_formated
 
 
     
