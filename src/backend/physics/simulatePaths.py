@@ -192,6 +192,29 @@ def draw_pockets(screen, pockets):
     for pos, radius in pockets:
         pygame.draw.circle(screen, (255, 255, 255), (int(pos[0]), int(pos[1])), radius, 2)  # White outline
 
+def get_cue_ball(pool_balls, max_color_diff=100):
+    def color_distance(color1, color2):
+        # Euclidean distance between two colors in RGB space
+        return math.sqrt((color1[0] - color2[0]) ** 2 + (color1[1] - color2[1]) ** 2 + (color1[2] - color2[2]) ** 2)
+
+    remaining_balls = []
+    closest_ball = None
+    closest_color_diff = float('inf') 
+
+    for ball in pool_balls:        
+        color_diff = color_distance(ball.color, (255, 255, 255))
+
+        # If the ball is closer to white and within the color difference threshold, keep it
+        if color_diff < closest_color_diff and color_diff <= max_color_diff:
+            closest_color_diff = color_diff
+            if closest_ball:
+                remaining_balls.append(closest_ball)
+            closest_ball = ball
+        else:
+            remaining_balls.append(ball)
+
+    return closest_ball, remaining_balls
+
 def run_game(balls, screen, clock, pockets, show_simulation, WIDTH, HEIGHT):
     running = True
     friction_coefficient = 0.7  #
@@ -258,7 +281,7 @@ def run_game(balls, screen, clock, pockets, show_simulation, WIDTH, HEIGHT):
 
 
 
-def main(pool_balls, cue_ball=None, wall_cords=None, ball_radius=15, cue_angle=0, show_simulation=True):
+def main(pool_balls, wall_cords=None, ball_radius=15, cue_angle=0, show_simulation=True):
     global collisions, last_positions
     collisions = []
     last_positions = {}
@@ -288,6 +311,10 @@ def main(pool_balls, cue_ball=None, wall_cords=None, ball_radius=15, cue_angle=0
     handler_bp = space.add_collision_handler(1, 3)  
     handler_bp.begin = on_collision_ball_pocket
 
+    cue_ball, remaining_balls = get_cue_ball(pool_balls)
+    pool_balls = remaining_balls
+    cue_ball_pos_start = (cue_ball.x_cord, cue_ball.y_cord )
+
     balls = []
     for pb in pool_balls:
         x = pb.x_cord
@@ -297,20 +324,20 @@ def main(pool_balls, cue_ball=None, wall_cords=None, ball_radius=15, cue_angle=0
         ball = SimulatedBall(x, y, int(ball_radius), color, velocity=(0,0))
         balls.append(ball)
 
-    if cue_ball is None:
-        # Random cue ball velocity if not specified
-        speed = random.uniform(150, 220)
-        vx, vy = pymunk.Vec2d(speed, 0).rotated(math.radians(cue_angle))
-        cue = SimulatedBall(
-            WIDTH / 2, 
-            HEIGHT / 2, 
-            int(ball_radius), 
-            (255, 255, 255), 
-            pymunk.Vec2d(vx, vy)
-        )
-        balls.append(cue)
+    # Random cue ball velocity if not specified
+    speed = random.uniform(150, 220)
+    vx, vy = pymunk.Vec2d(speed, 0).rotated(math.radians(cue_angle))
+    
+    cue = SimulatedBall(
+        cue_ball.x_cord, 
+        cue_ball.y_cord, 
+        int(ball_radius), 
+        (255, 255, 255), 
+        pymunk.Vec2d(vx, vy)
+    )
+    balls.append(cue)
 
     pockets = create_pockets(WIDTH, HEIGHT)
 
     tempfile_svg_name = run_game(balls, screen, clock, pockets, show_simulation, WIDTH, HEIGHT)
-    return tempfile_svg_name
+    return tempfile_svg_name, cue_ball_pos_start
