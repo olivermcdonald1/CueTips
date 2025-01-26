@@ -50,10 +50,6 @@ def displayBalls(pool_balls, img, radius):
         
         # Draw the cartoon ball on the pool table image
         cv2.circle(img, (x, y), radius, pool_ball.color, -1)
-        
-        # Add the suit number (solid/striped) or similar identifier to the ball
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        cv2.putText(img, str(pool_ball.suit), (x - 5, y + 5), font, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
     
     return img
 
