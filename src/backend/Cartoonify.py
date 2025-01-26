@@ -10,33 +10,36 @@ def preprocess(img):
 
 def plotCircles(img, circles):
     pool_balls = []
- 
+    avg_radius = 0  # Default
+
     if circles is not None:
-        circles = np.round(circles[0, :]).astype("int")  # Round and convert to integer
+        circles = np.round(circles[0, :]).astype("int")
         radius_list = [circle[2] for circle in circles]
         min_radius = min(radius_list)
-        avg_radius = int(sum(radius_list)/len(radius_list))
-        for (x, y, r) in circles:
-            if r > min_radius * 2: 
+        avg_radius = int(sum(radius_list) / len(radius_list))
         
+        for (x, y, r) in circles:
+            if r > min_radius * 2:  # Ignore large circles that are likely not balls
                 continue
-          
             
-            
-            pool_ball = PoolBall(x, y, color=(0, 255, 0), suit="solid")
+            # Calculate the average color within the circle
+            mask = np.zeros(img.shape[:2], dtype="uint8")
+            cv2.circle(mask, (x, y), r, 255, -1)  # Mask the circle
+            mean_color = cv2.mean(img, mask=mask)  # Extract mean color from masked region
+            color = tuple(map(int, mean_color[:3]))  # Convert BGR to integer RGB
+
+            # Create a PoolBall with the detected properties
+            pool_ball = PoolBall(x, y, color=color, suit="solid")
             pool_balls.append(pool_ball)
             
-            print(f"Circle: x-cord: {x}, y-cord: {y}, radius: {r}")
+            print(f"Circle: x-cord: {x}, y-cord: {y}, radius: {r}, color: {color}")
             
-            # Draw the circle on the image
-            cv2.circle(img, center=(x, y), radius=r, color=(0, 255, 0), thickness=4)  # Green circle
+            # Draw the circle and color on the image
+            cv2.circle(img, center=(x, y), radius=r, color=color, thickness=-1)  # Fill with the detected color
 
-        # cv2.imshow(img)
-        # cv2.waitKey(0)
-        print(img)
-        print(pool_balls)
-        buildBorder(circles,min_radius)
-        return img, pool_balls, avg_radius
+        buildBorder(circles, min_radius)
+    
+    return img, pool_balls, avg_radius
 
 def displayBalls(pool_balls, table_coordinates, img_shape, radius):
     img = np.ones((img_shape[0], img_shape[1], 3), dtype=np.uint8) * 255  # Blank white
