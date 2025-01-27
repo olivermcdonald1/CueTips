@@ -9,8 +9,6 @@ import tempfile
 import tracemalloc
 
 
-
-
 collisions = []
 last_positions = {}
 import gc

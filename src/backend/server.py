@@ -66,9 +66,10 @@ def sim_angle():
             svg_content = f.read()
         print(type(svg_content))
         os.remove(tempfile_svg_name)  # Clean up temporary file
+        
         startX = int(cue_ball_pos_start[0])
         startY = int(cue_ball_pos_start[1])
-        return jsonify({"svg": svg_content, "Cue": (startX,startY)}), 200
+        return jsonify({"svg": svg_content, "Cue": (startX, startY)}), 200
     except Exception as e:
         return jsonify({"message": f"Error running simulation: {str(e)}"}), 500
 

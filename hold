@@ -1,0 +1,349 @@
+import sys
+import math
+import random
+import pygame
+import pymunk
+import svgwrite
+from io import StringIO
+
+# Initialize pymunk space and collision handlers
+space = pymunk.Space()
+space.gravity = (0, 0)
+
+collisions = []
+last_positions = {}
+
+# Constants for simulation
+FRICTION_COEFFICIENT = 0.7
+DELAY_TIME_STEP = 1 / 50.0  # Simulation step interval
+
+# Function to calculate deceleration due to friction
+def calculate_deceleration(velocity, friction_coefficient, delta_time):
+    speed = math.sqrt(velocity[0] ** 2 + velocity[1] ** 2)
+
+    if speed == 0:
+        return (0, 0)
+
+    deceleration = friction_coefficient * 9.8  # Gravity effect
+    new_speed = max(0, speed - deceleration * delta_time)
+
+    scale = new_speed / speed if speed > 0 else 0
+    return (velocity[0] * scale, velocity[1] * scale)
+
+# Collision handlers
+def on_collision_ball_ball(arbiter, space, data):
+    shape_a, shape_b = arbiter.shapes
+    for shape in (shape_a, shape_b):
+        if shape.collision_type == 1:
+            current_pos = shape.body.position
+            start_pos = data["last_positions"].get(shape, (current_pos.x, current_pos.y))
+            end_pos = (current_pos.x, current_pos.y)
+
+            if start_pos != end_pos:
+                ball_color = shape.color if hasattr(shape, 'color') else (255, 255, 255)
+                data["collisions"].append((start_pos, end_pos, ball_color))
+            data["last_positions"][shape] = end_pos
+
+    return True
+
+def on_collision_ball_wall(arbiter, space, data):
+    shape_a, shape_b = arbiter.shapes
+    ball_shape = shape_a if shape_a.collision_type == 1 else shape_b
+
+    current_pos = ball_shape.body.position
+    start_pos = data["last_positions"].get(ball_shape, (current_pos.x, current_pos.y))
+    end_pos = (current_pos.x, current_pos.y)
+
+    if start_pos != end_pos:
+        ball_color = ball_shape.color if hasattr(ball_shape, 'color') else (255, 255, 255)
+        data["collisions"].append((start_pos, end_pos, ball_color))
+    
+    data["last_positions"][ball_shape] = end_pos
+    return True
+
+def on_collision_ball_pocket(arbiter, space, data):
+    ball_shape, _ = arbiter.shapes
+    if ball_shape.collision_type == 1:
+        space.remove(ball_shape, ball_shape.body)
+    return False
+
+# Ball class to simulate each pool ball
+class SimulatedBall:
+    def __init__(self, x, y, radius, color, velocity=(0, 0)):
+        self.radius = radius
+        self.color = color
+        self.body = pymunk.Body(mass=1, moment=pymunk.moment_for_circle(1, 0, radius))
+        self.body.position = (x, y)
+        self.body.velocity = pymunk.Vec2d(velocity[0], velocity[1])
+
+        self.shape = pymunk.Circle(self.body, radius)
+        self.shape.friction = 0.06
+        self.shape.elasticity = 0.9
+        self.shape.collision_type = 1
+        self.shape.color = color
+
+        space.add(self.body, self.shape)
+        last_positions[self.shape] = (x, y)
+
+    def draw(self, screen):
+        pos = self.body.position
+        pygame.draw.circle(screen, self.color, (int(pos.x), int(pos.y)), self.radius)
+
+# Function to create the borders around the pool table
+def create_borders(edges):
+    top, bottom, left, right = edges
+    walls = [
+        pymunk.Segment(space.static_body, (top[0][0], top[0][1]), (top[1][0], top[1][1]), 5),
+        pymunk.Segment(space.static_body, (bottom[0][0], bottom[0][1]), (bottom[1][0], bottom[1][1]), 5),
+        pymunk.Segment(space.static_body, (left[0][0], left[0][1]), (left[1][0], left[1][1]), 5),
+        pymunk.Segment(space.static_body, (right[0][0], right[0][1]), (right[1][0], right[1][1]), 5)
+    ]
+    for wall in walls:
+        wall.friction = 0.14
+        wall.elasticity = 0.9
+        wall.collision_type = 2
+        space.add(wall)
+
+# Function to create pockets for the pool table
+def create_pockets():
+    WIDTH, HEIGHT = 400, 800
+    pocket_radius = 20
+    pocket_positions = [
+        (10, 10), (10, HEIGHT // 2 + 200), (WIDTH - 10, 10),
+        (10, HEIGHT - 10), (WIDTH // 2 + 192, HEIGHT // 2), (WIDTH - 10, HEIGHT - 10)
+    ]
+    pockets = []
+    for pos in pocket_positions:
+        pocket_body = pymunk.Body(body_type=pymunk.Body.STATIC)
+        pocket_shape = pymunk.Circle(pocket_body, pocket_radius)
+        pocket_body.position = pos
+        pocket_shape.collision_type = 3
+        space.add(pocket_body, pocket_shape)
+        pockets.append((pos, pocket_radius))
+    return pockets
+
+# Function to draw pockets on the screen
+def draw_pockets(screen, pockets):
+    for pos, radius in pockets:
+        pygame.draw.circle(screen, (255, 255, 255), (int(pos[0]), int(pos[1])), radius, 2)
+
+# Function to save collision paths as an SVG file
+def save_paths_as_svg(collisions, filename="ball_paths.svg"):
+    dwg = svgwrite.Drawing(filename, profile='tiny', size=(400, 800))
+    dwg.add(dwg.rect(insert=(0, 0), size=('100%', '100%'), fill='rgb(38, 141, 44)'))
+    for start, end, color in collisions:
+        svg_color = f'rgb({color[0]},{color[1]},{color[2]})'
+        dwg.add(dwg.line(start=(start[0], start[1]), end=(end[0], end[1]), stroke=svg_color, stroke_width=2))
+    dwg.save()
+
+# Function to simulate ball collisions and movements
+def run_simulation(balls, screen, clock, cue_angle=90):
+    """
+    Run the pool ball simulation with improved collision tracking.
+    
+    Args:
+        balls (List[SimulatedBall]): Balls to simulate
+        screen (pygame.Surface): Pygame screen for rendering
+        clock (pygame.time.Clock): Pygame clock for frame rate control
+        cue_angle (float, optional): Initial angle for cue ball. Defaults to 90.
+    """
+    global collisions, last_positions
+    running = True
+    pockets = create_pockets()
+    cue_ball = next((b for b in balls if b.color == (255, 255, 255)), None)
+    
+    if not cue_ball:
+        raise ValueError("Cue ball is required for the simulation")
+    
+    current_collisions = []  # Local list to track current frame's collisions
+    lines = []
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+        # Apply initial velocity to cue ball if stationary
+        if cue_ball.body.velocity.length == 0 and cue_angle is not None:
+            speed = 200
+            cue_ball.body.velocity = pymunk.Vec2d(
+                speed * math.cos(math.radians(cue_angle)), 
+                speed * math.sin(math.radians(cue_angle))
+            )
+
+        # Clear previous collision list for each frame
+        current_collisions.clear()
+
+        # Apply deceleration to all balls
+        for ball in balls:
+            ball.body.velocity = calculate_deceleration(
+                ball.body.velocity, 
+                FRICTION_COEFFICIENT, 
+                DELAY_TIME_STEP
+            )
+
+        # Step the physics simulation
+        space.step(DELAY_TIME_STEP)
+
+        # Fill the screen with pool table color
+        screen.fill((38, 141, 44))  
+
+        # Draw pockets
+        draw_pockets(screen, pockets)
+
+        # Draw all active balls
+        for ball in balls:
+            if ball.body in space.bodies:
+                ball.draw(screen)
+
+        # Draw collision lines for the current frame
+        for collision in collisions:
+            start, end, color = collision
+            lines.append((start))
+            print(len(lines))
+            pygame.draw.line(screen, color, 
+                             (int(start[0]), int(start[1])), 
+                             (int(end[0]), int(end[1])), 
+                             2)
+
+        # Update the screen
+        pygame.display.flip()
+
+        # Set the frame rate
+        clock.tick(50)
+
+    # Save paths as SVG after simulation ends
+    save_paths_as_svg(collisions)
+    
+    # Clean up and quit
+    pygame.quit()
+    sys.exit()
+
+
+# Main function for the simulation
+def simulate_collisions(balls, WIDTH, HEIGHT, cue_angle):
+    running = True
+    pockets = create_pockets()
+    cue_ball = next((b for b in balls if b.color == (255, 255, 255)), None)
+    if not cue_ball:
+        raise ValueError("Cue ball is required for the simulation")
+
+    # Initialize SVG
+    svg_output = StringIO()
+    dwg = svgwrite.Drawing(svg_output, profile='tiny', size=(str(WIDTH), str(HEIGHT)))
+
+    # Set up collision handlers
+    handler_bb = space.add_collision_handler(1, 1)
+    handler_bb.begin = on_collision_ball_ball
+    handler_bb.data["dwg"] = dwg  # Pass the SVG drawing to the collision handler
+
+    handler_bw = space.add_collision_handler(1, 2)
+    handler_bw.begin = on_collision_ball_wall
+    handler_bw.data["dwg"] = dwg  # Pass the SVG drawing to the collision handler
+
+    # Run the simulation
+    while running:
+        still_moving = any(abs(ball.body.velocity[0]) > 0 or abs(ball.body.velocity[1]) > 0 for ball in balls)
+        if not still_moving:
+            print("All balls have stopped")
+            break
+
+        # Apply velocity to the cue ball if not already moving
+        if cue_ball.body.velocity.length == 0 and cue_angle is not None:
+            speed = 200
+            cue_ball.body.velocity = pymunk.Vec2d(speed * math.cos(cue_angle), speed * math.sin(cue_angle))
+
+        # Apply deceleration to balls
+        for ball in balls:
+            ball.body.velocity = calculate_deceleration(ball.body.velocity, FRICTION_COEFFICIENT, DELAY_TIME_STEP)
+
+        # Step the physics simulation
+        space.step(DELAY_TIME_STEP)
+
+    # Return the SVG as a string after the simulation ends
+    return dwg.tostring()
+
+
+# Main entry point
+def main(pool_balls, cue_ball=None, wall_cords=None, ball_radius=15, cue_angle=90, show_simulation=True):
+    """
+    Main simulation entry point with enhanced collision handling.
+    
+    Args:
+        pool_balls (List[Ball]): Balls to simulate
+        cue_ball (Optional[Ball]): Predefined cue ball
+        wall_cords (List[Tuple]): Table boundary coordinates
+        ball_radius (int, optional): Radius of balls. Defaults to 15.
+        cue_angle (float, optional): Initial cue ball angle. Defaults to 90.
+        show_simulation (bool, optional): Whether to display visualization. Defaults to True.
+    
+    Returns:
+        Optional[str]: SVG paths if not showing simulation
+    """
+    global collisions, last_positions
+    
+    # Reset global tracking variables
+    collisions = []
+    last_positions = {}
+
+    # Validate input
+    if wall_cords is None:
+        raise ValueError("Wall coordinates must be provided.")
+
+    # Calculate table dimensions
+    top_edge = wall_cords[0]
+    left_edge = wall_cords[2]
+    WIDTH = top_edge[1][0] - top_edge[0][0]
+    HEIGHT = left_edge[1][1] - left_edge[0][1]
+
+    # Initialize Pygame
+    pygame.init()
+
+    # Create table borders
+    create_borders(wall_cords)
+
+    # Set up collision handlers with data tracking
+    handler_bb = space.add_collision_handler(1, 1)
+    handler_bb.begin = on_collision_ball_ball
+    handler_bb.data["collisions"] = collisions
+    handler_bb.data["last_positions"] = last_positions
+
+    handler_bw = space.add_collision_handler(1, 2)
+    handler_bw.begin = on_collision_ball_wall
+    handler_bw.data["collisions"] = collisions
+    handler_bw.data["last_positions"] = last_positions
+
+    handler_bp = space.add_collision_handler(1, 3)  
+    handler_bp.begin = on_collision_ball_pocket
+
+    # Create SimulatedBall instances
+    balls = []
+    for pb in pool_balls:
+        ball = SimulatedBall(
+            pb.x_cord, 
+            pb.y_cord, 
+            int(ball_radius), 
+            pb.color, 
+            velocity=pymunk.Vec2d(0, 0)
+        )
+        balls.append(ball)
+
+    # Generate or use predefined cue ball
+    if cue_ball is None:
+        # Random cue ball velocity if not specified
+        speed = random.uniform(150, 220)
+        vx, vy = pymunk.Vec2d(speed, 0).rotated(math.radians(cue_angle))
+        cue = SimulatedBall(
+            WIDTH / 2, 
+            HEIGHT / 2, 
+            int(ball_radius), 
+            (255, 255, 255), 
+            pymunk.Vec2d(vx, vy)
+        )
+        balls.append(cue)
+
+    # Run simulation based on display mode
+    if show_simulation:
+        run_simulation(balls, pygame.display.set_mode((WIDTH, HEIGHT)), pygame.time.Clock(), cue_angle)
+    else:
+        paths = simulate_collisions(balls, WIDTH, HEIGHT, cue_angle)
+        return paths
